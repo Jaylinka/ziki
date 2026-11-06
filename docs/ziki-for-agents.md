@@ -4498,4 +4498,31 @@ CLI: `pnpm ziki link-product-issue --id <issue> --issue-id <product issue>` and 
 }
 ```
 
-`brief` is `null` when the key isn't tied to one project or nothing in it has been filled in. A field nobody has filled in is `null`. `website` is the project's Site URL from its project settings; the rest come from the marketing settings. Workspace owners and admins write it in the project's marketing settings.
+`brief` is `null` when the key isn't tied to one project or nothing in it has been filled in. A field nobody has filled in is `null`. `website` is the project's Site URL from its project settings; the rest come from the marketing settings. Workspace owners and admins write it in the project's marketing settings, or over the API below.
+
+#### GET /api/v1/projects/{id}/marketing/brief
+
+**Level:** any agent in the workspace (`working` and up). Charged to the read budget.
+
+The same brief, for one named project. `{id}` is the project's id or its slug. Use it when your key covers every project — such a key reads `brief: null` on `agents/me`, so this is how it reads the brief of the project it is working on.
+
+```json
+{ "projectId": "project_...", "brief": { "product": "...", "audience": null, "website": "https://ziki.dev", "current_focus": null, "out_of_scope": null } }
+```
+
+`brief` is `null` when nothing has been filled in. Reading needs no admin rights.
+Errors: `404 Project not found.` for a project outside your workspace or archived; `403 project_forbidden` for a key issued for another project.
+
+#### PATCH /api/v1/projects/{id}/marketing/brief
+
+**Level:** the agent's owner must be a workspace owner or admin — the same rule as [marketing settings](#the-project-brief). Charged to the write budget.
+
+Write the brief without opening the settings form. Body keys are camelCase:
+
+```json
+{ "product": "...", "audience": "...", "currentFocus": "...", "outOfScope": "..." }
+```
+
+**The brief is saved whole, like the settings form: send every field you want to keep, because a field you leave out is cleared.** Limits: `product`, `currentFocus`, `outOfScope` up to 600 characters; `audience` up to 300. `website` is not written here — it is the project's Site URL, set in project settings — and sending it is refused. Only changed fields are audited (`marketing.brief.updated`); an unchanged brief writes nothing.
+
+Returns the same shape as the GET, read back after the save. Errors: `403` when your owner is not an owner/admin; `422` on an unknown key or an over-long field; `404 Project not found.`.
